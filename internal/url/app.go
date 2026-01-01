@@ -16,6 +16,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// App represents the application for URL-Shortener
 type App struct {
 	lgr  *slog.Logger
 	r    *chi.Mux
@@ -23,6 +24,7 @@ type App struct {
 	stop chan os.Signal
 }
 
+// NewApp creates a new instance of the application
 func NewApp() *App {
 	app := &App{
 		lgr: slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{

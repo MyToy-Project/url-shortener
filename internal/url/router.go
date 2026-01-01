@@ -11,8 +11,9 @@ import (
 	"gorm.io/gorm"
 )
 
-const alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+const base62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 
+// ShortURL represents a shortened URL in the database
 type ShortURL struct {
 	UrlID       uint `gorm:"primaryKey"`
 	OriginalURL string
@@ -22,10 +23,12 @@ type ShortURL struct {
 	DeletedAt   gorm.DeletedAt `gorm:"index"`
 }
 
+// ShortURLRequest represents a request to create a shortened URL
 type ShortURLRequest struct {
 	OriginalURL string `json:"original_url"`
 }
 
+// ErrorResponse represents an error response
 type ErrorResponse struct {
 	Message string `json:"message"`
 }
@@ -86,14 +89,14 @@ func newCode(n int) (string, error) {
 	}
 
 	out := make([]byte, n)
-	maxLen := big.NewInt(int64(len(alphabet)))
+	maxLen := big.NewInt(int64(len(base62)))
 
 	for i := 0; i < n; i++ {
 		x, err := rand.Int(rand.Reader, maxLen)
 		if err != nil {
 			return "", err
 		}
-		out[i] = alphabet[x.Int64()]
+		out[i] = base62[x.Int64()]
 	}
 	return string(out), nil
 }
