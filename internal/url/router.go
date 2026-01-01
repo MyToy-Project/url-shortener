@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/big"
 	"net/http"
 	"time"
@@ -26,6 +27,11 @@ type ShortURL struct {
 // ShortURLRequest represents a request to create a shortened URL
 type ShortURLRequest struct {
 	OriginalURL string `json:"original_url"`
+}
+
+// ShortURLResponse represents a response containing the shortened URL
+type ShortURLResponse struct {
+	ShortURL string `json:"short_url"`
 }
 
 // ErrorResponse represents an error response
@@ -80,6 +86,19 @@ func (a *App) buildShortURLCreation() http.HandlerFunc {
 			}
 			a.lgr.Error("can't create short url", "url", request.OriginalURL, "error", err)
 		}
+
+		fullURL := "://%s/%s"
+		fullURL = "http" + fullURL
+		if r.TLS != nil {
+			fullURL = "https" + fullURL
+		}
+
+		resp := ShortURLResponse{
+			ShortURL: fmt.Sprintf(fullURL, r.Host, shortURL.ShortCode),
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		_ = json.NewEncoder(w).Encode(resp)
 	}
 }
 
