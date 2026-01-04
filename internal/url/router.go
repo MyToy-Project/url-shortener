@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-chi/cors"
 	"gorm.io/gorm"
 )
 
@@ -40,7 +41,15 @@ type ErrorResponse struct {
 }
 
 func (a *App) registerRoutes() {
-	a.r.Post("/short-url", a.buildShortURLCreation())
+	a.r.Use(cors.Handler(
+		cors.Options{
+			AllowedOrigins: []string{"http://localhost:5500", "http://127.0.0.1:5500"},
+			AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+			AllowedHeaders: []string{"Accept", "Authorization", "Content-Type"},
+			MaxAge:         300,
+		},
+	))
+	a.r.Post("/api/shorten", a.buildShortURLCreation())
 	a.r.Get("/{code}", a.buildGettingShortURL())
 }
 
