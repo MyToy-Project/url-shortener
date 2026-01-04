@@ -5,11 +5,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math/big"
+	"net"
 	"net/http"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-chi/cors"
+	"golang.org/x/time/rate"
 	"gorm.io/gorm"
 )
 
@@ -49,7 +54,9 @@ func (a *App) registerRoutes() {
 			MaxAge:         300,
 		},
 	))
-	a.r.Post("/api/shorten", a.buildShortURLCreation())
+	// Rate limit only the shorten endpoint (per IP)
+	// Example: 30 requests per minute with a burst of 1
+	a.r.With(rateLimitByIP(30, 1)).Post("/api/shorten", a.buildShortURLCreation())
 	a.r.Get("/{code}", a.buildGettingShortURL())
 }
 
@@ -149,6 +156,101 @@ func (a *App) buildGettingShortURL() http.HandlerFunc {
 
 		http.Redirect(w, r, shortURL.OriginalURL, http.StatusFound)
 	}
+}
+
+// clientLimiter stores a per-client rate limiter and its last-seen timestamp.
+type clientLimiter struct {
+	lim      *rate.Limiter
+	lastSeen time.Time
+}
+
+var (
+	clientLimitersMu sync.Mutex
+	clientLimiters   = map[string]*clientLimiter{}
+)
+
+// rateLimitByIP returns a chi middleware that limits requests per client IP.
+// rpm: requests per minute
+// burst: allowed burst size
+func rateLimitByIP(rpm int, burst int) func(http.Handler) http.Handler {
+	// If disabled/misconfigured, do nothing.
+	if rpm <= 0 {
+		return func(next http.Handler) http.Handler { return next }
+	}
+	if burst <= 0 {
+		burst = 1
+	}
+
+	// Periodically cleanup old entries to avoid unbounded memory growth.
+	// This is a cheap, best-effort cleanup; no goroutines are started.
+	cleanupAfter := 10 * time.Minute
+
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ip := clientIP(r)
+
+			slog.Default().Info("rateLimitByIP", "ip", ip)
+			clientLimitersMu.Lock()
+			// Best-effort cleanup on request path.
+			now := time.Now()
+			for k, v := range clientLimiters {
+				if now.Sub(v.lastSeen) > cleanupAfter {
+					delete(clientLimiters, k)
+				}
+			}
+
+			cl, ok := clientLimiters[ip]
+			if !ok {
+				// Convert rpm to an event interval.
+				// Example: 30 rpm => 1 request per 2 seconds.
+				interval := time.Minute / time.Duration(rpm)
+				cl = &clientLimiter{
+					lim:      rate.NewLimiter(rate.Every(interval), burst),
+					lastSeen: now,
+				}
+				clientLimiters[ip] = cl
+			} else {
+				cl.lastSeen = now
+			}
+			allow := cl.lim.Allow()
+			clientLimitersMu.Unlock()
+
+			if !allow {
+				writeJSONError(w, http.StatusTooManyRequests, "rate limit exceeded")
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// clientIP extracts a best-effort client IP.
+// If behind a trusted proxy, ensure your proxy sets X-Forwarded-For or X-Real-IP.
+func clientIP(r *http.Request) string {
+	// X-Forwarded-For may contain multiple IPs: client, proxy1, proxy2, ...
+	xff := r.Header.Get("X-Forwarded-For")
+	if xff != "" {
+		parts := strings.Split(xff, ",")
+		if len(parts) > 0 {
+			ip := strings.TrimSpace(parts[0])
+			if ip != "" {
+				return ip
+			}
+		}
+	}
+
+	xrip := strings.TrimSpace(r.Header.Get("X-Real-IP"))
+	if xrip != "" {
+		return xrip
+	}
+
+	host, _, err := net.SplitHostPort(strings.TrimSpace(r.RemoteAddr))
+	if err == nil && host != "" {
+		return host
+	}
+	// Fallback
+	return strings.TrimSpace(r.RemoteAddr)
 }
 
 func writeJSONError(
