@@ -9,6 +9,8 @@ import (
 	"math/big"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -54,10 +56,29 @@ func (a *App) registerRoutes() {
 			MaxAge:         300,
 		},
 	))
+	a.r.Get("/", a.serveIndex())
+
 	// Rate limit only the shorten endpoint (per IP)
 	// Example: 30 requests per minute with a burst of 1
 	a.r.With(rateLimitByIP(30, 1)).Post("/api/shorten", a.buildShortURLCreation())
 	a.r.Get("/{code}", a.buildGettingShortURL())
+}
+
+func (a *App) serveIndex() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+		// Prefer current working directory (common during `go run .` from project root)
+		wd, _ := os.Getwd()
+		fmt.Print(wd)
+		p1 := filepath.Join(wd, "index.html")
+		if _, err := os.Stat(p1); err == nil {
+			http.ServeFile(w, r, p1)
+			return
+		}
+
+		http.Error(w, "index.html not found", http.StatusNotFound)
+	}
 }
 
 func (a *App) buildShortURLCreation() http.HandlerFunc {
