@@ -56,6 +56,7 @@ func (a *App) registerRoutes() {
 			MaxAge:         300,
 		},
 	))
+	a.r.Get("/", a.serveIndex())
 
 	// Rate limit only the shorten endpoint (per IP)
 	// Example: 30 requests per minute with a burst of 1
