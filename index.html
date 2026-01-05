@@ -253,9 +253,7 @@
             // Configure your backend API URL here
             // If backend is on same origin, use '/api/shorten'
             // If backend is on different port, use 'http://localhost:PORT/api/shorten'
-            const apiUrl = window.location.hostname === 'localhost'
-                ? 'http://localhost:8080/api/shorten'
-                : '/api/shorten';
+            const apiUrl = '/api/shorten';
 
             const response = await fetch(apiUrl, {
                 method: 'POST',
@@ -272,20 +270,14 @@
 
             const data = await response.json();
 
-            // Handle different possible response formats
-            let shortUrl = data.shortUrl || data.short_url || data.short ||
-                (data.code ? `${window.location.origin}/${data.code}` : null);
+            // Backend returns only the short code (e.g., "abc123")
+            // Your backend payload: { "short_code": "abc123" }
+            // Keep a few fallbacks for convenience during development.
+            const shortCode = data.short_code;
 
-            if (shortUrl) {
-                // Replace localhost with current hostname if present
-                if (shortUrl.includes('localhost')) {
-                    shortUrl = shortUrl.replace(/https?:\/\/localhost(:\d+)?/, window.location.origin);
-                }
-                // If it's just a path (starts with /), prepend the origin
-                if (shortUrl.startsWith('/')) {
-                    shortUrl = window.location.origin + shortUrl;
-                }
-
+            if (shortCode) {
+                // Automatically prepend the current host (HTTPS domain)
+                const shortUrl = `${window.location.origin}/${shortCode}`;
                 showResult(shortUrl);
                 longUrlInput.value = '';
             } else {
