@@ -13,7 +13,7 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+            'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
@@ -176,146 +176,157 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🔗 URL Shortener</h1>
-        <p class="subtitle">Shorten your long URLs quickly and easily</p>
-        
-        <form id="shorten-form">
-            <div class="form-group">
-                <label for="long-url">Enter your long URL:</label>
-                <input 
-                    type="url" 
-                    id="long-url" 
-                    name="long-url" 
+<div class="container">
+    <h1>🔗 URL Shortener</h1>
+    <p class="subtitle">Shorten your long URLs quickly and easily</p>
+
+    <form id="shorten-form">
+        <div class="form-group">
+            <label for="long-url">Enter your long URL:</label>
+            <input
+                    type="url"
+                    id="long-url"
+                    name="long-url"
                     placeholder="https://example.com/very/long/url"
                     required
-                >
-            </div>
-            <button type="submit" id="submit-btn">Shorten URL</button>
-        </form>
+            >
+        </div>
+        <button type="submit" id="submit-btn">Shorten URL</button>
+    </form>
 
-        <div class="error" id="error-message"></div>
+    <div class="error" id="error-message"></div>
 
-        <div class="result" id="result">
-            <div class="result-label">Your shortened URL:</div>
-            <div class="result-url">
-                <a href="" id="shortened-url" target="_blank" rel="noopener noreferrer"></a>
-                <button class="copy-btn" id="copy-btn">📋 Copy</button>
-            </div>
+    <div class="result" id="result">
+        <div class="result-label">Your shortened URL:</div>
+        <div class="result-url">
+            <a href="" id="shortened-url" target="_blank" rel="noopener noreferrer"></a>
+            <button class="copy-btn" id="copy-btn">📋 Copy</button>
         </div>
     </div>
+</div>
 
-    <script>
-        const form = document.getElementById('shorten-form');
-        const longUrlInput = document.getElementById('long-url');
-        const submitBtn = document.getElementById('submit-btn');
-        const resultDiv = document.getElementById('result');
-        const shortenedUrlLink = document.getElementById('shortened-url');
-        const copyBtn = document.getElementById('copy-btn');
-        const errorDiv = document.getElementById('error-message');
+<script>
+    const form = document.getElementById('shorten-form');
+    const longUrlInput = document.getElementById('long-url');
+    const submitBtn = document.getElementById('submit-btn');
+    const resultDiv = document.getElementById('result');
+    const shortenedUrlLink = document.getElementById('shortened-url');
+    const copyBtn = document.getElementById('copy-btn');
+    const errorDiv = document.getElementById('error-message');
 
-        // Hide error and result initially
-        function hideMessages() {
-            errorDiv.classList.remove('show');
-            resultDiv.classList.remove('show');
+    // Hide error and result initially
+    function hideMessages() {
+        errorDiv.classList.remove('show');
+        resultDiv.classList.remove('show');
+    }
+
+    // Show error message
+    function showError(message) {
+        errorDiv.textContent = message;
+        errorDiv.classList.add('show');
+        resultDiv.classList.remove('show');
+    }
+
+    // Show result
+    function showResult(shortUrl) {
+        shortenedUrlLink.href = shortUrl;
+        shortenedUrlLink.textContent = shortUrl;
+        resultDiv.classList.add('show');
+        errorDiv.classList.remove('show');
+    }
+
+    // Handle form submission
+    form.addEventListener('submit', async function(event) {
+        event.preventDefault();
+        hideMessages();
+
+        const longUrl = longUrlInput.value.trim();
+        if (!longUrl) {
+            showError('Please enter a valid URL');
+            return;
         }
 
-        // Show error message
-        function showError(message) {
-            errorDiv.textContent = message;
-            errorDiv.classList.add('show');
-            resultDiv.classList.remove('show');
-        }
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Shortening...';
 
-        // Show result
-        function showResult(shortUrl) {
-            shortenedUrlLink.href = shortUrl;
-            shortenedUrlLink.textContent = shortUrl;
-            resultDiv.classList.add('show');
-            errorDiv.classList.remove('show');
-        }
+        try {
+            // Configure your backend API URL here
+            // If backend is on same origin, use '/api/shorten'
+            // If backend is on different port, use 'http://localhost:PORT/api/shorten'
+            const apiUrl = window.location.hostname === 'localhost'
+                ? 'http://localhost:8080/api/shorten'
+                : '/api/shorten';
 
-        // Handle form submission
-        form.addEventListener('submit', async function(event) {
-            event.preventDefault();
-            hideMessages();
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({original_url: longUrl })
+            });
 
-            const longUrl = longUrlInput.value.trim();
-            if (!longUrl) {
-                showError('Please enter a valid URL');
-                return;
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || errorData.error || 'Failed to shorten URL');
             }
 
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Shortening...';
+            const data = await response.json();
 
-            try {
-                // Configure your backend API URL here
-                // If backend is on same origin, use '/api/shorten'
-                // If backend is on different port, use 'http://localhost:PORT/api/shorten'
-                const apiUrl = '/api/shorten';
-                
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({original_url: longUrl })
-                });
+            // Handle different possible response formats
+            let shortUrl = data.shortUrl || data.short_url || data.short ||
+                (data.code ? `${window.location.origin}/${data.code}` : null);
 
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.message || errorData.error || 'Failed to shorten URL');
+            if (shortUrl) {
+                // Replace localhost with current hostname if present
+                if (shortUrl.includes('localhost')) {
+                    shortUrl = shortUrl.replace(/https?:\/\/localhost(:\d+)?/, window.location.origin);
+                }
+                // If it's just a path (starts with /), prepend the origin
+                if (shortUrl.startsWith('/')) {
+                    shortUrl = window.location.origin + shortUrl;
                 }
 
-                const data = await response.json();
-                
-                // Handle different possible response formats
-                const shortUrl = data.shortUrl || data.short_url || data.short || 
-                               (data.code ? `${window.location.origin}/${data.code}` : null);
-
-                if (shortUrl) {
-                    showResult(shortUrl);
-                    longUrlInput.value = '';
-                } else {
-                    showError('Unexpected response format from server');
-                }
-            } catch (error) {
-                showError(error.message || 'Something went wrong. Please try again.');
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Shorten URL';
+                showResult(shortUrl);
+                longUrlInput.value = '';
+            } else {
+                showError('Unexpected response format from server');
             }
-        });
+        } catch (error) {
+            showError(error.message || 'Something went wrong. Please try again.');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Shorten URL';
+        }
+    });
 
-        // Copy to clipboard
-        copyBtn.addEventListener('click', async function() {
-            const url = shortenedUrlLink.textContent;
+    // Copy to clipboard
+    copyBtn.addEventListener('click', async function() {
+        const url = shortenedUrlLink.textContent;
+        try {
+            await navigator.clipboard.writeText(url);
+            copyBtn.textContent = '✓ Copied!';
+            setTimeout(() => {
+                copyBtn.textContent = '📋 Copy';
+            }, 2000);
+        } catch (err) {
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = url;
+            document.body.appendChild(textArea);
+            textArea.select();
             try {
-                await navigator.clipboard.writeText(url);
+                document.execCommand('copy');
                 copyBtn.textContent = '✓ Copied!';
                 setTimeout(() => {
                     copyBtn.textContent = '📋 Copy';
                 }, 2000);
-            } catch (err) {
-                // Fallback for older browsers
-                const textArea = document.createElement('textarea');
-                textArea.value = url;
-                document.body.appendChild(textArea);
-                textArea.select();
-                try {
-                    document.execCommand('copy');
-                    copyBtn.textContent = '✓ Copied!';
-                    setTimeout(() => {
-                        copyBtn.textContent = '📋 Copy';
-                    }, 2000);
-                } catch (e) {
-                    showError('Failed to copy to clipboard');
-                }
-                document.body.removeChild(textArea);
+            } catch (e) {
+                showError('Failed to copy to clipboard');
             }
-        });
-    </script>
+            document.body.removeChild(textArea);
+        }
+    });
+</script>
 </body>
 </html>
 
