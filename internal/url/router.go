@@ -244,6 +244,7 @@ func rateLimitByIP(rpm int, burst int) func(http.Handler) http.Handler {
 // If behind a trusted proxy, ensure your proxy sets X-Forwarded-For or X-Real-IP.
 func clientIP(r *http.Request) string {
 	// X-Forwarded-For may contain multiple IPs: client, proxy1, proxy2, ...
+	slog.Default().Info("all ips", "ips", r.Header)
 	xff := r.Header.Get("X-Forwarded-For")
 	if xff != "" {
 		parts := strings.Split(xff, ",")
