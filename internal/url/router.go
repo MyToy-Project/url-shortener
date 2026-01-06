@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log/slog"
 	"math/big"
 	"net"
@@ -70,7 +69,6 @@ func (a *App) serveIndex() http.HandlerFunc {
 
 		// Prefer current working directory (common during `go run .` from project root)
 		wd, _ := os.Getwd()
-		fmt.Print(wd)
 		p1 := filepath.Join(wd, "index.html")
 		if _, err := os.Stat(p1); err == nil {
 			http.ServeFile(w, r, p1)
@@ -154,6 +152,11 @@ func newCode(n int) (string, error) {
 func (a *App) buildGettingShortURL() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		code := r.PathValue("code")
+		// Reject codes that contain a file extension (e.g. ".html", ".png")
+		if strings.Contains(code, ".") {
+			writeJSONError(w, http.StatusBadRequest, "invalid short code")
+			return
+		}
 		if code == "" {
 			writeJSONError(w, http.StatusBadRequest, "code is required")
 			return
