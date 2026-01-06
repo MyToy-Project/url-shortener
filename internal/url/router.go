@@ -204,7 +204,6 @@ func rateLimitByIP(rpm int, burst int) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ip := clientIP(r)
 
-			slog.Default().Info("rateLimitByIP", "ip", ip)
 			clientLimitersMu.Lock()
 			// Best-effort cleanup on request path.
 			now := time.Now()
@@ -231,6 +230,8 @@ func rateLimitByIP(rpm int, burst int) func(http.Handler) http.Handler {
 			clientLimitersMu.Unlock()
 
 			if !allow {
+				// TODO create counter metric
+				slog.Default().Warn("rate limit exceeded", "ip", ip)
 				writeJSONError(w, http.StatusTooManyRequests, "rate limit exceeded")
 				return
 			}
@@ -244,7 +245,6 @@ func rateLimitByIP(rpm int, burst int) func(http.Handler) http.Handler {
 // If behind a trusted proxy, ensure your proxy sets X-Forwarded-For or X-Real-IP.
 func clientIP(r *http.Request) string {
 	// X-Forwarded-For may contain multiple IPs: client, proxy1, proxy2, ...
-	slog.Default().Info("all ips", "ips", r.Header)
 	xff := r.Header.Get("X-Forwarded-For")
 	if xff != "" {
 		parts := strings.Split(xff, ",")
