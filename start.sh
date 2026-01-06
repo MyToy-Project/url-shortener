@@ -18,16 +18,16 @@ echo "▶ Starting $APP_NAME..."
 cd "$APP_DIR"
 mkdir -p "$PID_DIR" "$LOG_DIR" "$BIN_DIR"
 
-# 이미 실행 중인지 확인
+# Check if it's already running
 if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
   echo "❌ $APP_NAME is already running (PID $(cat "$PID_FILE"))"
   exit 1
 fi
 
-# 빌드
+# Build app
 go build -o "$BIN" ./cmd
 
-# 실행
+# Run app
 nohup "$BIN" > "$LOG_FILE" 2>&1 &
 PID=$!
 echo "$PID" > "$PID_FILE"
