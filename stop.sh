@@ -14,7 +14,7 @@ fi
 PID=$(cat "$PID_FILE")
 
 if kill -0 "$PID" 2>/dev/null; then
-  kill "$PID"
+  kill "$PID" 2>/dev/null || true
   echo "⏳ Waiting for process to stop..."
 
   for i in {1..10}; do
@@ -27,7 +27,7 @@ if kill -0 "$PID" 2>/dev/null; then
   done
 
   echo "⚠️  Force killing $APP_NAME"
-  kill -9 "$PID"
+  kill -9 "$PID" 2>/dev/null || true
   rm -f "$PID_FILE"
   echo "✅ $APP_NAME force stopped"
 else
