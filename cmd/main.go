@@ -2,7 +2,7 @@ package main
 
 import (
 	"log"
-	"url-shortner/internal/url"
+	"url-shortener/internal/url"
 
 	"github.com/joho/godotenv"
 )
