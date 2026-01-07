@@ -107,7 +107,7 @@ func (a *App) buildShortURLCreation() http.HandlerFunc {
 			if errors.Is(err, gorm.ErrDuplicatedKey) {
 				var regeneratedCode string
 				regeneratedCode, err = newCode(8)
-				if err == nil {
+				if err != nil {
 					writeJSONError(w, http.StatusInternalServerError, "can't generate short code again")
 					return
 				}
