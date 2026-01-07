@@ -60,7 +60,7 @@ func (a *App) registerRoutes() {
 	// Rate limit only the shorten endpoint (per IP)
 	// Example: 30 requests per minute with a burst of 1
 	a.r.With(rateLimitByIP(30, 1)).Post("/api/shorten", a.buildShortURLCreation())
-	a.r.Get("/{code}", a.buildGettingShortURL())
+	a.r.With(rateLimitByIP(30, 1)).Get("/{code}", a.buildGettingShortURL())
 }
 
 func (a *App) serveIndex() http.HandlerFunc {
