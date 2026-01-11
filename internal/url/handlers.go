@@ -1,0 +1,140 @@
+package url
+
+import (
+	"crypto/rand"
+	"encoding/json"
+	"errors"
+	"math/big"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"gorm.io/gorm"
+)
+
+func (a *App) buildIndexServeHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+		// Prefer current working directory (common during `go run .` from project root)
+		wd, _ := os.Getwd()
+		p1 := filepath.Join(wd, "index.html")
+		if _, err := os.Stat(p1); err == nil {
+			http.ServeFile(w, r, p1)
+			return
+		}
+
+		http.Error(w, "index.html not found", http.StatusNotFound)
+	}
+}
+
+func (a *App) buildShortURLCreationHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var request ShortURLRequest
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			writeJSONError(w, http.StatusBadRequest, "invalid json body")
+			return
+		}
+		if request.OriginalURL == "" {
+			writeJSONError(w, http.StatusBadRequest, "original url is required")
+			return
+		}
+
+		code, err := newCode(8)
+		if err != nil {
+			a.lgr.Error("can't generate short code", "url", request.OriginalURL, "error", err)
+			writeJSONError(w, http.StatusInternalServerError, "something went wrong")
+			return
+		}
+
+		shortURL := ShortURL{
+			OriginalURL: request.OriginalURL,
+			ShortCode:   code,
+		}
+
+		if err = a.db.Create(&shortURL).Error; err != nil {
+			if errors.Is(err, gorm.ErrDuplicatedKey) {
+				var regeneratedCode string
+				regeneratedCode, err = newCode(8)
+				if err != nil {
+					writeJSONError(w, http.StatusInternalServerError, "can't generate short code again")
+					return
+				}
+
+				shortURL.ShortCode = regeneratedCode
+				if err = a.db.Create(&shortURL).Error; err != nil {
+					a.lgr.Error("can't insert short url to DB", "url", request.OriginalURL, "error", err)
+					writeJSONError(w, http.StatusInternalServerError, "something went wrong")
+					return
+				}
+			}
+			a.lgr.Error("can't create short url", "url", request.OriginalURL, "error", err)
+		}
+
+		resp := ShortCodeResponse{
+			ShortCode: shortURL.ShortCode,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		_ = json.NewEncoder(w).Encode(resp)
+	}
+}
+
+func (a *App) buildGettingShortURLHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		code := r.PathValue("code")
+		// Reject codes that contain a file extension (e.g. ".html", ".png")
+		if strings.Contains(code, ".") {
+			writeJSONError(w, http.StatusBadRequest, "invalid short code")
+			return
+		}
+		if code == "" {
+			writeJSONError(w, http.StatusBadRequest, "code is required")
+			return
+		}
+		var shortURL ShortURL
+		if err := a.db.Where(&ShortURL{ShortCode: code}).First(&shortURL).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				writeJSONError(w, http.StatusNotFound, "short url not found")
+				return
+			}
+			a.lgr.Error("can't find short url", "code", code, "error", err)
+			writeJSONError(w, http.StatusInternalServerError, "something went wrong")
+			return
+		}
+
+		http.Redirect(w, r, shortURL.OriginalURL, http.StatusFound)
+	}
+}
+
+func newCode(n int) (string, error) {
+	if n <= 0 {
+		return "", nil
+	}
+
+	out := make([]byte, n)
+	maxLen := big.NewInt(int64(len(base62)))
+
+	for i := 0; i < n; i++ {
+		x, err := rand.Int(rand.Reader, maxLen)
+		if err != nil {
+			return "", err
+		}
+		out[i] = base62[x.Int64()]
+	}
+	return string(out), nil
+}
+
+func writeJSONError(
+	w http.ResponseWriter,
+	status int,
+	message string,
+) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+
+	_ = json.NewEncoder(w).Encode(ErrorResponse{
+		Message: message,
+	})
+}
