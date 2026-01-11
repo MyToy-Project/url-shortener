@@ -25,6 +25,10 @@ if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
 fi
 
 # Build app
+echo "Running tests..."
+make test
+
+echo "Running build..."
 make build
 
 # Run app
