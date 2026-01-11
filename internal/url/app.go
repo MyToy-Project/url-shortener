@@ -36,6 +36,7 @@ func NewApp() *App {
 	}
 	slog.SetDefault(app.lgr)
 
+	// TODO Make it testable
 	name := os.Getenv("DB_NAME")
 	port := os.Getenv("DB_PORT")
 	user := os.Getenv("DB_USER")

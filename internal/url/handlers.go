@@ -41,6 +41,7 @@ func (a *App) buildShortURLCreationHandler() http.HandlerFunc {
 			return
 		}
 
+		// TODO think, how to test
 		code, err := newCode(8)
 		if err != nil {
 			a.lgr.Error("can't generate short code", "url", request.OriginalURL, "error", err)
@@ -53,6 +54,7 @@ func (a *App) buildShortURLCreationHandler() http.HandlerFunc {
 			ShortCode:   code,
 		}
 
+		// TODO replace to interface
 		if err = a.db.Create(&shortURL).Error; err != nil {
 			if errors.Is(err, gorm.ErrDuplicatedKey) {
 				var regeneratedCode string
@@ -70,6 +72,8 @@ func (a *App) buildShortURLCreationHandler() http.HandlerFunc {
 				}
 			}
 			a.lgr.Error("can't create short url", "url", request.OriginalURL, "error", err)
+			writeJSONError(w, http.StatusInternalServerError, "something went wrong")
+			return
 		}
 
 		resp := ShortCodeResponse{
