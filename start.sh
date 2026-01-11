@@ -25,10 +25,10 @@ if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
 fi
 
 # Build app
-go build -o "$BIN" ./cmd
+make build
 
 # Run app
-nohup "$BIN" > "$LOG_FILE" 2>&1 &
+nohup make run > "$LOG_FILE" 2>&1 &
 PID=$!
 echo "$PID" > "$PID_FILE"
 
