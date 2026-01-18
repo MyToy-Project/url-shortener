@@ -41,6 +41,7 @@ type ErrorResponse struct {
 
 func (a *App) buildIndexServeHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		countUpTotalRequestCounter(r.RequestURI)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 		// Prefer current working directory (common during `go run .` from project root)
@@ -59,10 +60,12 @@ func (a *App) buildShortURLCreationHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var request ShortURLRequest
 		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			countUpShortURLCreationCounter("failed")
 			writeJSONError(w, http.StatusBadRequest, "invalid json body")
 			return
 		}
 		if request.OriginalURL == "" {
+			countUpShortURLCreationCounter("failed")
 			writeJSONError(w, http.StatusBadRequest, "original url is required")
 			return
 		}
@@ -70,6 +73,7 @@ func (a *App) buildShortURLCreationHandler() http.HandlerFunc {
 		// TODO think, how to test
 		code, err := newCode(8)
 		if err != nil {
+			countUpShortURLCreationCounter("failed")
 			a.lgr.Error("can't generate short code", "url", request.OriginalURL, "error", err)
 			writeJSONError(w, http.StatusInternalServerError, "something went wrong")
 			return
@@ -86,22 +90,34 @@ func (a *App) buildShortURLCreationHandler() http.HandlerFunc {
 				var regeneratedCode string
 				regeneratedCode, err = newCode(8)
 				if err != nil {
+					countUpShortURLCreationCounter("failed")
 					writeJSONError(w, http.StatusInternalServerError, "can't generate short code again")
 					return
 				}
 
 				shortURL.ShortCode = regeneratedCode
 				if err = a.db.Create(&shortURL).Error; err != nil {
-					a.lgr.Error("can't insert short url to DB", "url", request.OriginalURL, "error", err)
+					countUpShortURLCreationCounter("failed")
+					a.lgr.Error("can't create short url to DB", "url", request.OriginalURL, "error", err)
 					writeJSONError(w, http.StatusInternalServerError, "something went wrong")
 					return
 				}
+				countUpShortURLCreationCounter("success")
+				resp := ShortCodeResponse{
+					ShortCode: shortURL.ShortCode,
+				}
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusCreated)
+				_ = json.NewEncoder(w).Encode(resp)
+				return
 			}
+			countUpShortURLCreationCounter("failed")
 			a.lgr.Error("can't create short url", "url", request.OriginalURL, "error", err)
 			writeJSONError(w, http.StatusInternalServerError, "something went wrong")
 			return
 		}
 
+		countUpShortURLCreationCounter("success")
 		resp := ShortCodeResponse{
 			ShortCode: shortURL.ShortCode,
 		}
@@ -113,6 +129,8 @@ func (a *App) buildShortURLCreationHandler() http.HandlerFunc {
 
 func (a *App) buildGettingShortURLHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		countUpTotalRequestCounter(r.RequestURI)
+
 		code := r.PathValue("code")
 		// Reject codes that contain a file extension (e.g. ".html", ".png")
 		if strings.Contains(code, ".") {
