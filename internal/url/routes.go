@@ -2,6 +2,7 @@ package url
 
 import (
 	"github.com/go-chi/cors"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 const base62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
@@ -15,6 +16,7 @@ func (a *App) registerRoutes() {
 			MaxAge:         300,
 		},
 	))
+	a.r.Handle("/metrics", promhttp.Handler())
 	a.r.Get("/", a.buildIndexServeHandler())
 
 	// Rate limit only the shorten endpoint (per IP)
