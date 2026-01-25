@@ -16,6 +16,7 @@ func (a *App) registerRoutes() {
 			MaxAge:         300,
 		},
 	))
+	a.r.Get("/health", a.buildHealthCheckHandler())
 	a.r.Handle("/metrics", promhttp.Handler())
 	a.r.Get("/", a.buildIndexServeHandler())
 
