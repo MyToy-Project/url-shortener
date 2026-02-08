@@ -4,6 +4,9 @@ set -euo pipefail
 APP_DIR="${APP_DIR:-$HOME/url-shortener}"
 COMPOSE_BIN="${COMPOSE_BIN:-docker compose}"
 
+echo "Update repository to the latest"
+git pull
+
 echo "▶ Starting url-shortener stack via Docker Compose..."
 
 cd "$APP_DIR"
