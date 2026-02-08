@@ -19,8 +19,6 @@ if ! pgrep -x dockerd >/dev/null 2>&1; then
 fi
 
 # shellcheck disable=SC2086
-$COMPOSE_BIN pull
-# shellcheck disable=SC2086
 $COMPOSE_BIN up -d --build
 
 echo "✅ Containers are up. Use 'docker compose ps' to check status."
