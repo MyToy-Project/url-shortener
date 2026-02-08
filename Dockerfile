@@ -11,6 +11,8 @@ COPY go.mod go.sum ./
 RUN go mod download
 # Copy the entire application source
 COPY . .
+# Run tests before building to fail fast if code is broken
+RUN go test ./...
 # Build the Go binary
 RUN go build -o /app ./cmd/
 
