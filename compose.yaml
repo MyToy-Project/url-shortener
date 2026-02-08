@@ -29,6 +29,7 @@ services:
     image: prom/prometheus:v2.55.0
     volumes:
       - ./Docker/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
     user: "65534"
     read_only: true
     cap_drop:
@@ -69,6 +70,7 @@ services:
 
 volumes:
   grafana-data:
+  prometheus-data:
 
 networks:
   go-network:
