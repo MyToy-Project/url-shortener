@@ -1,41 +1,27 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
-APP_NAME="url-shortener"
-APP_DIR="$HOME/url-shortener"
+APP_DIR="${APP_DIR:-$HOME/url-shortener}"
+COMPOSE_BIN="${COMPOSE_BIN:-docker compose}"
 
-PID_DIR="$HOME/pid"
-PID_FILE="$PID_DIR/${APP_NAME}.pid"
+echo "Update repository to the latest"
+git pull
 
-LOG_DIR="$HOME/logs"
-LOG_FILE="$LOG_DIR/${APP_NAME}.log"
-
-BIN_DIR="$APP_DIR/bin"
-BIN="$BIN_DIR/${APP_NAME}"
-
-echo "▶ Starting $APP_NAME..."
+echo "▶ Starting url-shortener stack via Docker Compose..."
 
 cd "$APP_DIR"
-mkdir -p "$PID_DIR" "$LOG_DIR" "$BIN_DIR"
 
-# Check if it's already running
-if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
-  echo "❌ $APP_NAME is already running (PID $(cat "$PID_FILE"))"
+if ! command -v docker >/dev/null 2>&1; then
+  echo "❌ Docker is not installed or not in PATH"
   exit 1
 fi
 
-# Build app
-echo "Running tests..."
-make test
+if ! pgrep -x dockerd >/dev/null 2>&1; then
+  echo "ℹ️  Starting Docker service..."
+  sudo systemctl start docker
+fi
 
-echo "Running build..."
-make build
+# shellcheck disable=SC2086
+$COMPOSE_BIN up -d --build
 
-# Run app
-nohup make run > "$LOG_FILE" 2>&1 &
-PID=$!
-echo "$PID" > "$PID_FILE"
-
-sleep 0.2
-echo "✅ $APP_NAME started successfully (PID $PID)"
-echo "📄 Log file: $LOG_FILE"
+echo "✅ Containers are up. Use 'docker compose ps' to check status."

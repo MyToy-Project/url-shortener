@@ -1,0 +1,79 @@
+services:
+  api:
+    container_name: url-shortener
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: go-api:latest
+    ports:
+      - "8080:8080"
+    networks:
+      - go-network
+      - monitoring-net
+    env_file:
+      - .env
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    develop:
+      watch:
+        - path: .
+          action: rebuild
+    mem_limit: 512m
+    cpus: "0.50"
+
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus:v2.55.0
+    volumes:
+      - ./Docker/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    user: "65534"
+    read_only: true
+    cap_drop:
+      - ALL
+    ports:
+      - "127.0.0.1:9090:9090"
+    networks:
+      - monitoring-net
+    healthcheck:
+      test: [ "CMD-SHELL", "wget --spider --quiet http://localhost:9090/-/ready || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    mem_limit: 1g
+    cpus: "1.00"
+
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:11.3.0
+    volumes:
+      - ./Docker/grafana.yml:/etc/grafana/provisioning/datasources/datasource.yml:ro
+      - grafana-data:/var/lib/grafana
+    user: "472"
+    read_only: true
+    cap_drop:
+      - ALL
+    ports:
+      - "127.0.0.1:3000:3000"
+    networks:
+      - monitoring-net
+    healthcheck:
+      test: [ "CMD-SHELL", "wget --spider --quiet http://localhost:3000/api/health || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    mem_limit: 512m
+    cpus: "0.50"
+
+volumes:
+  grafana-data:
+  prometheus-data:
+
+networks:
+  go-network:
+    driver: bridge
+  monitoring-net:
+    driver: bridge
