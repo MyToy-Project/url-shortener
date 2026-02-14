@@ -5,8 +5,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-const base62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-
 func (a *App) registerRoutes() {
 	a.r.Use(cors.Handler(
 		cors.Options{

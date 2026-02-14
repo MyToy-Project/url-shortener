@@ -14,6 +14,8 @@ import (
 	"gorm.io/gorm"
 )
 
+const base62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+
 // ShortURL represents a shortened URL in the database
 type ShortURL struct {
 	UrlID       uint `gorm:"primaryKey"`
