@@ -76,10 +76,15 @@ func (a *App) buildShortURLCreationHandler() http.HandlerFunc {
 			writeJSONError(w, http.StatusBadRequest, "invalid json body")
 			return
 		}
-		if request.OriginalURL == "" {
+		err := verifyURL(request.OriginalURL)
+		if err != nil {
 			countUpShortURLCreationCounter("failed")
-			writeJSONError(w, http.StatusBadRequest, "original url is required")
+			writeJSONError(w, http.StatusBadRequest, "invalid url")
 			return
+		}
+
+		if strings.HasPrefix(request.OriginalURL, "https://") {
+			request.OriginalURL = "https://" + request.OriginalURL
 		}
 
 		// TODO think, how to test
@@ -137,6 +142,17 @@ func (a *App) buildShortURLCreationHandler() http.HandlerFunc {
 		w.WriteHeader(http.StatusCreated)
 		_ = json.NewEncoder(w).Encode(resp)
 	}
+}
+
+func verifyURL(url string) error {
+	if url == "" {
+		return errors.New("url is empty")
+	}
+	if len(url) > 2048 {
+		return errors.New("url is too long")
+	}
+
+	return nil
 }
 
 func (a *App) buildGettingShortURLHandler() http.HandlerFunc {

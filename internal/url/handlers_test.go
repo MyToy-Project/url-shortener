@@ -96,6 +96,8 @@ func TestApp_buildIndexServeHandler_NotFound(t *testing.T) {
 }
 
 func TestApp_buildShortURLCreationHandler(t *testing.T) {
+	longURL := createLongURL()
+
 	tests := []struct {
 		name        string
 		requestBody string
@@ -103,22 +105,28 @@ func TestApp_buildShortURLCreationHandler(t *testing.T) {
 		wantBody    string
 	}{
 		{
-			name:        "when everything works, it will create short code for shortened-url",
+			name:        "when everything works, will create short code for shortened-url",
 			requestBody: `{"original_url":"https://example.com"}`,
 			wantStatus:  http.StatusCreated,
 			wantBody:    "short_code",
 		},
 		{
-			name:        "when it requests with invalid request body, it will return error",
+			name:        "when it requests with invalid request body",
 			requestBody: `{"original_url":"https://google.co}`,
 			wantStatus:  http.StatusBadRequest,
 			wantBody:    "invalid json body",
 		},
 		{
-			name:        "when it requests with empty url, it will return error",
+			name:        "when it requests with empty url",
 			requestBody: `{"original_url":""}`,
 			wantStatus:  http.StatusBadRequest,
-			wantBody:    "original url is required",
+			wantBody:    "invalid url",
+		},
+		{
+			name:        "when it requests with long url",
+			requestBody: `{"original_url": "` + longURL + `"}`,
+			wantStatus:  http.StatusBadRequest,
+			wantBody:    "invalid url",
 		},
 	}
 	for _, tt := range tests {
@@ -192,4 +200,8 @@ func TestApp_buildGettingShortURLHandler(t *testing.T) {
 			cleanTestData(t, a.db)
 		})
 	}
+}
+
+func createLongURL() string {
+	return "https://google.com" + strings.Repeat("a", 2048-17)
 }
