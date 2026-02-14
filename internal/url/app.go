@@ -3,7 +3,6 @@ package url
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -12,7 +11,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
@@ -25,7 +23,7 @@ type App struct {
 }
 
 // NewApp creates a new instance of the application
-func NewApp() *App {
+func NewApp(db *gorm.DB) *App {
 	app := &App{
 		lgr: slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 			AddSource: true,
@@ -33,27 +31,9 @@ func NewApp() *App {
 		})),
 		r:    chi.NewRouter(),
 		stop: make(chan os.Signal, 1),
+		db:   db,
 	}
 	slog.SetDefault(app.lgr)
-
-	// TODO Make it testable
-	name := os.Getenv("DB_NAME")
-	port := os.Getenv("DB_PORT")
-	user := os.Getenv("DB_USER")
-	password := os.Getenv("DB_PASSWORD")
-	host := os.Getenv("DB_HOST")
-
-	db, err := gorm.Open(postgres.Open(fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s", host, user, password, name, port)))
-	if err != nil {
-		app.lgr.Error("can't connect database", "error", err)
-		return nil
-	}
-	err = db.Migrator().AutoMigrate(&ShortURL{})
-	if err != nil {
-		return nil
-	}
-	app.db = db
-
 	signal.Notify(app.stop, syscall.SIGINT, syscall.SIGTERM)
 	app.registerRoutes()
 
