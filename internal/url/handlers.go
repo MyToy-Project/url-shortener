@@ -76,6 +76,7 @@ func (a *App) buildShortURLCreationHandler() http.HandlerFunc {
 			writeJSONError(w, http.StatusBadRequest, "invalid json body")
 			return
 		}
+		request.OriginalURL = strings.TrimSpace(request.OriginalURL)
 		err := verifyURL(request.OriginalURL)
 		if err != nil {
 			countUpShortURLCreationCounter("failed")
@@ -150,6 +151,9 @@ func verifyURL(url string) error {
 	}
 	if len(url) > 2048 {
 		return errors.New("url is too long")
+	}
+	if strings.Contains(url, " ") {
+		return errors.New("url must not contain spaces")
 	}
 
 	return nil

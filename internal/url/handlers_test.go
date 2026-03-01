@@ -128,6 +128,12 @@ func TestApp_buildShortURLCreationHandler(t *testing.T) {
 			wantStatus:  http.StatusBadRequest,
 			wantBody:    "invalid url",
 		},
+		{
+			name:        "when it requests with url contains white space",
+			requestBody: `{"original_url": "https://exam ple.com"}`,
+			wantStatus:  http.StatusBadRequest,
+			wantBody:    "invalid url",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
