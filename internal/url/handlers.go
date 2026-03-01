@@ -83,7 +83,7 @@ func (a *App) buildShortURLCreationHandler() http.HandlerFunc {
 			return
 		}
 
-		if strings.HasPrefix(request.OriginalURL, "https://") {
+		if !strings.HasPrefix(request.OriginalURL, "https://") {
 			request.OriginalURL = "https://" + request.OriginalURL
 		}
 
