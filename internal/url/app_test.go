@@ -2,6 +2,7 @@ package url
 
 import (
 	"testing"
+	"url-shortener/internal/url/handler"
 
 	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
@@ -13,7 +14,7 @@ func TestNewApp(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = db.AutoMigrate(&ShortURL{}); err != nil {
+	if err = db.AutoMigrate(&handler.ShortURL{}); err != nil {
 		t.Fatal(err)
 	}
 	app := NewApp(db)

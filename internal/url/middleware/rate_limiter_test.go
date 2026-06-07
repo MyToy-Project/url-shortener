@@ -1,4 +1,4 @@
-package url
+package middleware
 
 import (
 	"net/http"
@@ -33,7 +33,7 @@ func createRequestByIP(ip string) *http.Request {
 func Test_rateLimitByIP_ImmediateRequestDenied(t *testing.T) {
 	resetLimiters(t)
 
-	mw := rateLimitByIP(60, 1)
+	mw := RateLimitByIP(60, 1)
 
 	h := mw(buildTestHandler())
 
@@ -53,7 +53,7 @@ func Test_rateLimitByIP_ImmediateRequestDenied(t *testing.T) {
 func Test_rateLimitByIp_DifferentIPRequestAccepted(t *testing.T) {
 	resetLimiters(t)
 
-	mw := rateLimitByIP(60, 1)
+	mw := RateLimitByIP(60, 1)
 
 	h := mw(buildTestHandler())
 
@@ -79,7 +79,7 @@ func Test_rateLimitByIp_DifferentIPRequestAccepted(t *testing.T) {
 func TestRateLimitByIP_UsesXForwardedForFirstIP(t *testing.T) {
 	resetLimiters(t)
 
-	mw := rateLimitByIP(60, 1)
+	mw := RateLimitByIP(60, 1)
 
 	h := mw(buildTestHandler())
 
@@ -103,7 +103,7 @@ func TestRateLimitByIP_UsesXForwardedForFirstIP(t *testing.T) {
 func TestRateLimitByIP_RPMDisabledIsNoOp(t *testing.T) {
 	resetLimiters(t)
 
-	mw := rateLimitByIP(0, 1)
+	mw := RateLimitByIP(0, 1)
 
 	h := mw(buildTestHandler())
 
@@ -123,7 +123,7 @@ func TestRateLimitByIP_RPMDisabledIsNoOp(t *testing.T) {
 func TestRateLimitByIP_BurstDefaultedToOneWhenNonPositive(t *testing.T) {
 	resetLimiters(t)
 
-	mw := rateLimitByIP(60, 0)
+	mw := RateLimitByIP(60, 0)
 
 	h := mw(buildTestHandler())
 
@@ -145,7 +145,7 @@ func TestRateLimitByIP_ConcurrentAccessDoesNotRace(t *testing.T) {
 
 	var tooMany int32
 
-	mw := rateLimitByIP(60000, 1000)
+	mw := RateLimitByIP(60000, 1000)
 	h := mw(buildTestHandler())
 
 	var wg sync.WaitGroup

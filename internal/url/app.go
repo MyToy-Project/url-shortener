@@ -9,33 +9,27 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-
-	"github.com/go-chi/chi/v5"
-	"gorm.io/gorm"
 )
 
 // App represents the application for URL-Shortener
 type App struct {
 	lgr  *slog.Logger
-	r    *chi.Mux
-	db   *gorm.DB
+	h    http.Handler
 	stop chan os.Signal
 }
 
 // NewApp creates a new instance of the application
-func NewApp(db *gorm.DB) *App {
+func NewApp(router http.Handler) *App {
 	app := &App{
 		lgr: slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 			AddSource: true,
 			Level:     slog.LevelInfo,
 		})),
-		r:    chi.NewRouter(),
+		h:    router,
 		stop: make(chan os.Signal, 1),
-		db:   db,
 	}
 	slog.SetDefault(app.lgr)
 	signal.Notify(app.stop, syscall.SIGINT, syscall.SIGTERM)
-	app.registerRoutes()
 
 	return app
 }
@@ -43,7 +37,7 @@ func NewApp(db *gorm.DB) *App {
 func (a *App) Run() {
 	server := http.Server{
 		Addr:    ":8080",
-		Handler: http.TimeoutHandler(a.r, 1*time.Second, "request timeout"),
+		Handler: http.TimeoutHandler(a.h, 1*time.Second, "request timeout"),
 	}
 
 	go func() {

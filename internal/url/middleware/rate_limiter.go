@@ -1,12 +1,14 @@
-package url
+package middleware
 
 import (
+	"encoding/json"
 	"log/slog"
 	"net"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
+	"url-shortener/internal/url/handler"
 
 	"golang.org/x/time/rate"
 )
@@ -22,10 +24,10 @@ var (
 	clientLimiters   = map[string]*clientLimiter{}
 )
 
-// rateLimitByIP returns a chi middleware that limits requests per client IP.
+// RateLimitByIP returns a chi middleware that limits requests per client IP.
 // rpm: requests per minute
 // burst: allowed burst size
-func rateLimitByIP(rpm int, burst int) func(http.Handler) http.Handler {
+func RateLimitByIP(rpm int, burst int) func(http.Handler) http.Handler {
 	// If disabled/misconfigured, do nothing.
 	if rpm <= 0 {
 		return func(next http.Handler) http.Handler { return next }
@@ -105,4 +107,17 @@ func clientIP(r *http.Request) string {
 	}
 	// Fallback
 	return strings.TrimSpace(r.RemoteAddr)
+}
+
+func writeJSONError(
+	w http.ResponseWriter,
+	status int,
+	message string,
+) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+
+	_ = json.NewEncoder(w).Encode(handler.ErrorResponse{
+		Message: message,
+	})
 }

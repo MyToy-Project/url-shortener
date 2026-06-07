@@ -33,7 +33,7 @@ func setupTestRegistry(t *testing.T) *prometheus.Registry {
 func TestCountUpNumberOfRequestCounter(t *testing.T) {
 	reg := setupTestRegistry(t)
 	prev, _ := testutil.GatherAndCount(reg, totalRequestName)
-	countUpTotalRequestCounter("/")
+	CountUpTotalRequestCounter("/")
 	curr, _ := testutil.GatherAndCount(reg, totalRequestName)
 	assert.Equal(t, prev, curr-1)
 }

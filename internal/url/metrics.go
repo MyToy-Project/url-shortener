@@ -31,10 +31,10 @@ var (
 	)
 )
 
-func countUpTotalRequestCounter(typeName string) {
+func CountUpTotalRequestCounter(typeName string) {
 	totalRequestCounter.With(prometheus.Labels{"type": typeName}).Inc()
 }
 
-func countUpShortURLCreationCounter(state string) {
+func CountUpShortURLCreationCounter(state string) {
 	shortURLCreationCounter.With(prometheus.Labels{"state": state}).Inc()
 }
