@@ -41,7 +41,7 @@ func TestCountUpNumberOfRequestCounter(t *testing.T) {
 func TestCountupShortURLCreationCounter(t *testing.T) {
 	reg := setupTestRegistry(t)
 	prev, _ := testutil.GatherAndCount(reg, shortURLCreationName)
-	countUpShortURLCreationCounter("success")
+	CountUpShortURLCreationCounter("success")
 	curr, _ := testutil.GatherAndCount(reg, shortURLCreationName)
 	assert.Equal(t, prev, curr-1)
 }
