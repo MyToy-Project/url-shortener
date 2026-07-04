@@ -44,7 +44,7 @@ func CreateRouter() http.Handler {
 	// Rate limit only the shorten endpoint (per IP)
 	// Example: 30 requests per minute with a burst of 1
 
-	suh := short_url.NewHandler(*svc)
+	suh := short_url.NewHandler(svc)
 	r.With(middleware.RateLimitByIP(30, 1)).Post("/api/shorten", suh.HandleShortURLCreation)
 	r.With(middleware.RateLimitByIP(30, 5)).Get("/{code}", suh.HandleGettingOriginalURL)
 

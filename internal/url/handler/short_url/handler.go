@@ -5,11 +5,15 @@ import (
 	"net/http"
 	"url-shortener/internal/url"
 	"url-shortener/internal/url/handler"
-	"url-shortener/internal/url/service"
 )
 
 type ShortURLHandler struct {
-	svc service.ShortURLService
+	svc URLService
+}
+
+type URLService interface {
+	GenerateShortURL(originalURL string) (string, error)
+	GetOriginalURL(code string) (string, error)
 }
 
 // ShortURLRequest represents a request to create a shortened URL
@@ -22,7 +26,7 @@ type ShortCodeResponse struct {
 	ShortCode string `json:"short_code"`
 }
 
-func NewHandler(svc service.ShortURLService) *ShortURLHandler {
+func NewHandler(svc URLService) *ShortURLHandler {
 	return &ShortURLHandler{
 		svc: svc,
 	}
